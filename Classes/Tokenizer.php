@@ -11,11 +11,9 @@
         /**
          * @return array
          */
-        public function getTokens()
+        public function getTokens() : array
         {
             return $this->tokens;
         }
-
     }
-
 ?>
