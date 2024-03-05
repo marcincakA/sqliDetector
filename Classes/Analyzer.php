@@ -36,15 +36,15 @@ class Analyzer
             }
             $isVulnerable = false;
             $oldLineNumber = $lineNumber;
+            if ($token->id == 317) {
+                $this->variablesHashMap[$token->text][] = $token->line;
+            }
             if ($token->id == 397){
                 continue;
             }
             if ($token->id == 319 || $token->text == "sqli_query" || $token->text == "sql_query"){
                 $line->setVulnerable();
                 $isVulnerable = true;
-            }
-            if ($line == null){
-                continue;
             }
             $line->addToken(new MyToken($token, $isVulnerable)); // store tokens in line class
         }
@@ -73,12 +73,12 @@ class Analyzer
     public function printLines() {
         foreach ($this->linesHashMap as $line) {
             $value = $line->isVulnerable() ? "is vulnerable" : "is not vulnerable";
+            echo "<br>";
             echo "Line number: " . $line->getLineNumber() . " " . $value ."<br>";
             $Mytokens = $line->getTokens();
             foreach ($Mytokens as $token) {
-                echo "Token text => " . " " . $token->getToken()->text. "  Token id => " . $token->getToken()->id . " Token name => " . token_name($token->getToken()->id) . " line: ". $token->getToken()->line . " pos: " . $token->pos ."<br>";
+                echo "Token text => " . " " . $token->getToken()->text. "  Token id => " . $token->getToken()->id . " Token name => " . token_name($token->getToken()->id) . " line: ". $token->getToken()->line . " pos: " . $token->getToken()->pos ."<br>";
             }
         }
     }
-
 }
