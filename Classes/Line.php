@@ -1,5 +1,10 @@
 <?php
 include_once "MyToken.php";
+/*
+ * Trieda reprezentujuca riadok kodu
+ * Uklada tokeny do pola
+ * Taktiez obsahuje atribut lineNumber, ktory reprezentuje cislo riadku pre jednoduhsi pristup v pripade hashmapy
+ * */
 class Line
 {
     private int $lineNumber;
@@ -25,8 +30,15 @@ class Line
         return $this->lineNumber;
     }
 
+    /*public function addToken(MyToken $token, int $position): void
+    {
+        //$this->tokens[$position][] = $token;
+        $this->tokens[] = $token;
+    }*/
+
     public function addToken(MyToken $token): void
     {
+        //$this->tokens[$position][] = $token;
         $this->tokens[] = $token;
     }
 

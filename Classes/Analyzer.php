@@ -5,9 +5,14 @@ include_once 'Classes/Line.php';
 
 class Analyzer
 {
+    //hashMap kluc - premenna, hodnota - pole riadkov kde sa nachadza
     private array $variablesHashMap;
+    //hashMap kluc - cislo riadku, hodnota - riadok (pole tokenov)
     private array $linesHashMap;
+    //pole indexov riadkov, ktore obsahuju SQL query exectution point (zatial mysqli_query a mysqli_real_query)
+    private array $sqlExecutionPoints;
 
+    //pole zranitelnosti zatial nevyuzite
     private array $vulnerabilities;
     private Tokenizer $tokenizer;
 
@@ -17,36 +22,56 @@ class Analyzer
         $this->variablesHashMap = array();
         $this->linesHashMap = array();
         $this->vulnerabilities = array();
+        $this->sqlExecutionPoints = array();
 
         $this->init();
     }
 
-    private function init() {
+    /**
+     * @return void
+     * Inicializacia analyzera
+     * Rozdeli tokeny do riadkov a ulozi ich do hashMapy
+     * Ulozi vsetky premenne do hashMapy
+     * Ulozi vsetky SQL execution points do pola
+     */
+    private function init() : void {
         $tokens = $this->tokenizer->getTokens();
         $line = null;
         $oldLineNumber = 0;
+        //$position = 0;
         foreach ($tokens as $token) {
             $lineNumber = $token->line;
             if ($lineNumber != $oldLineNumber) {
                 if ($line != null) {
-                    $this->linesHashMap[$lineNumber] = $line;
+                    $this->linesHashMap[$oldLineNumber] = $line;
                 }
                 //new line created
                 $line = new Line($lineNumber, false);
+                //$position = 0;
             }
             $isVulnerable = false;
             $oldLineNumber = $lineNumber;
             if ($token->id == 317) {
                 $this->variablesHashMap[$token->text][] = $token->line;
             }
-            if ($token->id == 397){
+            //skip whitespace and comments
+            if ($token->id == 397 || $token->id == 392){
                 continue;
             }
-            if ($token->id == 319 || $token->text == "sqli_query" || $token->text == "sql_query"){
+            //zatial to necham takto a kazdy string s parametrom bude vulnerable
+            if ($token->id == 319){
                 $line->setVulnerable();
                 $isVulnerable = true;
             }
-            $line->addToken(new MyToken($token, $isVulnerable)); // store tokens in line class
+
+            if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query') {
+                $line->setVulnerable();
+                $isVulnerable = true;
+                $this->sqlExecutionPoints[] = $lineNumber;
+            }
+
+            $line->addToken(new MyToken($token, $isVulnerable)/*, $position*/); // store tokens in line class
+            //$position++;
         }
     }
 
@@ -70,15 +95,183 @@ class Analyzer
         return $this->tokenizer;
     }
 
-    public function printLines() {
+    public function printLines() : void {
         foreach ($this->linesHashMap as $line) {
             $value = $line->isVulnerable() ? "is vulnerable" : "is not vulnerable";
             echo "<br>";
             echo "Line number: " . $line->getLineNumber() . " " . $value ."<br>";
             $Mytokens = $line->getTokens();
             foreach ($Mytokens as $token) {
-                echo "Token text => " . " " . $token->getToken()->text. "  Token id => " . $token->getToken()->id . " Token name => " . token_name($token->getToken()->id) . " line: ". $token->getToken()->line . " pos: " . $token->getToken()->pos ."<br>";
+                echo "Token text => " . " " . $token->getToken()->text. "  Token id => " . $token->getToken()->id . "; Token name => " . token_name($token->getToken()->id) . " line: ". $token->getToken()->line . " pos: " . $token->getToken()->pos ."<br>";
+            }
+        }
+
+        //print exec points
+        echo "<br>";
+        echo "SQL Execution Points: ";
+        foreach ($this->sqlExecutionPoints as $point) {
+            echo $point . " ";
+        }
+    }
+
+    public function analyzeExecutionPoints() : void {
+        foreach ($this->sqlExecutionPoints as $point) {
+            $line = $this->linesHashMap[$point];
+            $tokens = $line->getTokens();
+            $exPointFound = false;
+            $position = 0;
+            foreach ($tokens as $token) {
+                //monentalne pracuje na proceduralnej urovni
+                if ($token->getToken()->text == 'mysqli_query' || $token->getToken()->text == 'mysqli_real_query') {
+                    $exPointFound = true;
+                    $this->findSQLCommand($line, $position);
+                }
+                $position++;
             }
         }
     }
+
+    /*
+     * Procedural style
+     * mysqli_real_query(mysqli $mysql, string $query): bool
+     * mysqli_query(mysqli $mysql, string $query, int $resultmode = MYSQLI_STORE_RESULT): mysqli_result|bool
+     * 1st param is connection
+     * 2nd param is query
+     * */
+    public function findSQLCommand($line, $position) : void {
+        $tokens = $line->getTokens();
+        $exPointFound = false;
+        //$position = 0;
+        $lineSize = count($tokens) - 1;
+        $commandIsFound = false;
+        for($i = $lineSize; $i > $position; $i--) {
+            //311 T_LNUMBER cislo, 313 T_STRING redundantny if
+            if ($tokens[$i]->getToken()->id ==  311 || $tokens[$i]->getToken()->id == 2) {
+                //$exPointFound = true;
+                //$position = $i;
+                //break;
+            }
+            //317 T_VARIABLE
+            if ($tokens[$i]->getToken()->id ==  317) {
+                //searchVariable();
+                echo("Variable found: " . $tokens[$i]->getToken()->text . "<br>");
+                $commandIsFound= $this->searchVariableForSQLCommand($tokens[$i]->getToken()->text);
+            }
+        }
+    }
+
+    /**
+     * @param string $variable
+     * @return void
+     * Prehladavanie riadkov v ktorych sa nachadza premenna hladanie slov INSERT, UPDATE, DELETE, SELECT
+     */
+    public function searchVariableForSQLCommand(string $variable) : void
+    {
+        $lines = $this->variablesHashMap[$variable];
+        foreach ($lines as $line) {
+            $line = $this->linesHashMap[$line];
+            $tokens = $line->getTokens();
+            $position = 0;
+            $counter = 0;
+            //$isSafe = false;
+            foreach ($tokens as $token) {
+                //podmienky na hladanie prikazov
+                if ($token->getToken()->id !=  319) {
+                    $position = $counter;
+                    continue;
+                }
+                $foundStatement = strtolower($token->getToken()->text);
+                //320 T_CONSTANT_ENCAPSED_STRING -> string s parametrom // sanca na zranitelny sql prikaz
+                if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
+                    str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
+                    str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
+                    str_contains($foundStatement, 'delete') && str_contains($foundStatement, 'from')) {
+                    {
+                        $this->isSQLComandSafe($line, $position);
+                    }
+                }
+                $counter++;
+            }
+        }
+    }
+    /*
+     * almost bullshit*/
+    public function isSQLComandSafe($line, $position) : bool {
+
+        $tokens = $line->getTokens();
+        $lineSize = count($tokens) - 1;
+        $found = false;
+        $variablesToCheck = array();
+        for($i = $lineSize; $i > $position; $i--) {
+            if ($tokens[$i]->getToken()->id ==  319) {
+                echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
+                $found = true;
+            }
+            if ($found && $tokens[$i]->getToken()->id ==  317) {
+                $variablesToCheck[] = $tokens[$i]->getToken()->text;
+            }
+
+        }
+        if ($found) {
+            foreach ($variablesToCheck as $variable) {
+                if(!$this->isSanitazed($variable, $line->getLineNumber())){
+                    //todo pridat do vulnerabilities
+                    $this->vulnerabilities[] = $variable . " is not sanitized";
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    //momentale sa spolieha na to ze nebude prepisana po prvom vstupe
+    //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?
+    private function isSanitazed($variable, $lineNumber) : bool {
+        $locations = $this->variablesHashMap[$variable];
+        for($i = 0; $i < count($locations); $i++) {
+            if ($locations[$i] >= $lineNumber) {
+                return false;
+            }
+            $tokens = $locations[$i]->getTokens();
+            foreach ($tokens as $token) {
+                if (str_contains($token->getToken()->text, 'mysqli_real_escape_string')) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * @param $line
+     * @param $position
+     * Constructs SQL command from given line and position
+     * Useless bullshit
+     * @return string
+     */
+    private function constructSQLCommand($line, $position) : string {
+        $tokens = $line->getTokens();
+        $lineSize = count($tokens) - 1;
+        $command = "";
+            for($i = $position; $i <$lineSize; $i++) {
+                if ($tokens[$i]->getToken()->id ==  34) {
+                    break;
+                }
+                $command .= $tokens[$i]->getToken()->text;
+            }
+            return $command;
+    }
+    //naco ti je toto
+    private function cutCommand($command) : string {
+
+        return $command;
+    }
+
+    public function printVulnerabilities() : void {
+        foreach ($this->vulnerabilities as $vulnerability) {
+            echo $vulnerability . "<br>";
+        }
+    }
 }
+
+
