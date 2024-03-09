@@ -7,6 +7,8 @@ $query = "SELECT * FROM products WHERE id=$id";
 // Connect to the database
 $connection = mysqli_connect("localhost", "root", "", "shop", "", "");
 // Execute the query
+mysqli_real_escape_string($connection, $id);
+
 $result = mysqli_query($connection, $query);
 
 // Fetch the data
@@ -27,5 +29,5 @@ mysqli_close($connection);
 
 $query = "SELECT * FROM products WHERE id=$id AND name=$name";
 $query = "SELECT * FROM products WHERE id=? AND name=?";
-mysqli_real_escape_string($connection, $id);
+
 ?>

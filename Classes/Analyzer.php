@@ -155,7 +155,7 @@ class Analyzer
             if ($tokens[$i]->getToken()->id ==  317) {
                 //searchVariable();
                 echo("Variable found: " . $tokens[$i]->getToken()->text . "<br>");
-                $commandIsFound= $this->searchVariableForSQLCommand($tokens[$i]->getToken()->text);
+                $this->searchVariableForSQLCommand($tokens[$i]->getToken()->text);
             }
         }
     }
@@ -203,7 +203,8 @@ class Analyzer
         $found = false;
         $variablesToCheck = array();
         for($i = $lineSize; $i > $position; $i--) {
-            if ($tokens[$i]->getToken()->id ==  319) {
+            //find variables
+            if ($tokens[$i]->getToken()->id ==  317) {
                 echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
                 $found = true;
             }
@@ -232,7 +233,7 @@ class Analyzer
             if ($locations[$i] >= $lineNumber) {
                 return false;
             }
-            $tokens = $locations[$i]->getTokens();
+            $tokens = $this->linesHashMap[$locations[$i]]->getTokens();
             foreach ($tokens as $token) {
                 if (str_contains($token->getToken()->text, 'mysqli_real_escape_string')) {
                     return true;

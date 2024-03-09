@@ -1,4 +1,7 @@
 <?php
+/**
+Do not use this file, it is useless
+ */
 include 'Classes/Tokenizer.php';
 include 'Classes/MyToken.php';
 $tokenizer = new Tokenizer('TestFile.php');
@@ -30,4 +33,5 @@ foreach ($tokens as $token) {
     $line->addToken(new MyToken($token, $isVulnerable));
 }
 echo "<br>";
-?>
+
+
