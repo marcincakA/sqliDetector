@@ -144,7 +144,7 @@ class Analyzer
      * 1st param is connection
      * 2nd param is query
      * */
-    public function findSQLCommand($line, $position) : void {
+    private function findSQLCommand($line, $position) : void {
         $tokens = $line->getTokens();
         $exPointFound = false;
         //$position = 0;
@@ -166,7 +166,7 @@ class Analyzer
      * @return void
      * Prehladavanie riadkov v ktorych sa nachadza premenna hladanie slov INSERT && INTO, UPDATE && SET, DELETE && FROM, SELECT && FROM
      */
-    public function searchVariableForSQLCommand(string $variable) : void
+    private function searchVariableForSQLCommand(string $variable) : void
     {
         $lines = $this->variablesHashMap[$variable];
         foreach ($lines as $line) {
@@ -181,6 +181,7 @@ class Analyzer
                     $position = $counter;
                     continue;
                 }
+                //to lower pre jednoduhsie hladanie
                 $foundStatement = strtolower($token->getToken()->text);
                 //320 T_CONSTANT_ENCAPSED_STRING -> string s parametrom // sanca na zranitelny sql prikaz
                 if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
@@ -188,6 +189,7 @@ class Analyzer
                     str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
                     str_contains($foundStatement, 'delete') && str_contains($foundStatement, 'from')) {
                     {
+                        //poslem prikaz ktory sa nasiel aj s pozicou v riadku
                         $this->isSQLComandSafe($line, $position);
                     }
                 }
