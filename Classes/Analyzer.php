@@ -63,7 +63,7 @@ class Analyzer
                 $line->setVulnerable();
                 $isVulnerable = true;
             }
-
+            //najde vykonavanie sqlPrikazu a zapise do pola
             if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query') {
                 $line->setVulnerable();
                 $isVulnerable = true;
@@ -114,6 +114,11 @@ class Analyzer
         }
     }
 
+    /**
+     * @return void
+     * Analyzuje vykonavacie body SQL prikazov
+     * Prechadza riadky a hlada vykonavacie body
+     */
     public function analyzeExecutionPoints() : void {
         foreach ($this->sqlExecutionPoints as $point) {
             $line = $this->linesHashMap[$point];
@@ -124,6 +129,7 @@ class Analyzer
                 //monentalne pracuje na proceduralnej urovni
                 if ($token->getToken()->text == 'mysqli_query' || $token->getToken()->text == 'mysqli_real_query') {
                     $exPointFound = true;
+                    //Hladaj od konca do bodu v ktorom sa nasiel exec point
                     $this->findSQLCommand($line, $position);
                 }
                 $position++;
@@ -145,16 +151,11 @@ class Analyzer
         $lineSize = count($tokens) - 1;
         $commandIsFound = false;
         for($i = $lineSize; $i > $position; $i--) {
-            //311 T_LNUMBER cislo, 313 T_STRING redundantny if
-            if ($tokens[$i]->getToken()->id ==  311 || $tokens[$i]->getToken()->id == 2) {
-                //$exPointFound = true;
-                //$position = $i;
-                //break;
-            }
             //317 T_VARIABLE
             if ($tokens[$i]->getToken()->id ==  317) {
                 //searchVariable();
                 echo("Variable found: " . $tokens[$i]->getToken()->text . "<br>");
+                /**/
                 $this->searchVariableForSQLCommand($tokens[$i]->getToken()->text);
             }
         }
@@ -163,7 +164,7 @@ class Analyzer
     /**
      * @param string $variable
      * @return void
-     * Prehladavanie riadkov v ktorych sa nachadza premenna hladanie slov INSERT, UPDATE, DELETE, SELECT
+     * Prehladavanie riadkov v ktorych sa nachadza premenna hladanie slov INSERT && INTO, UPDATE && SET, DELETE && FROM, SELECT && FROM
      */
     public function searchVariableForSQLCommand(string $variable) : void
     {
@@ -194,18 +195,26 @@ class Analyzer
             }
         }
     }
-    /*
-     * almost bullshit*/
+
+    /**
+     * @param $line
+     * @param $position
+     * @return bool
+     * Kontroluje ci je SQL prikaz bezpecny
+     * 1. krok - najde vsetky premenne v SQL prikaze
+     * 2. krok - prejde vsetky premenne a zisti ci su zranitelne
+     */
     public function isSQLComandSafe($line, $position) : bool {
 
         $tokens = $line->getTokens();
         $lineSize = count($tokens) - 1;
         $found = false;
         $variablesToCheck = array();
+        //krok 1
         for($i = $lineSize; $i > $position; $i--) {
             //find variables
             if ($tokens[$i]->getToken()->id ==  317) {
-                echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
+                //echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
                 $found = true;
             }
             if ($found && $tokens[$i]->getToken()->id ==  317) {
@@ -213,10 +222,10 @@ class Analyzer
             }
 
         }
+        //krok 2
         if ($found) {
             foreach ($variablesToCheck as $variable) {
                 if(!$this->isSanitazed($variable, $line->getLineNumber())){
-                    //todo pridat do vulnerabilities
                     $this->vulnerabilities[] = $variable . " is not sanitized";
                     return false;
                 }
@@ -227,6 +236,7 @@ class Analyzer
 
     //momentale sa spolieha na to ze nebude prepisana po prvom vstupe
     //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?
+    //Prejde vsetky riadky kde sa nachadza premenna a hlada ci sa niekde nachadza mysqli_real_escape_string
     private function isSanitazed($variable, $lineNumber) : bool {
         $locations = $this->variablesHashMap[$variable];
         for($i = 0; $i < count($locations); $i++) {

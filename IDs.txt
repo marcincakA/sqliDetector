@@ -4,3 +4,4 @@
 59 - ;
 313 - T_String
 320 - T_ConstantEncapsedString "Hello World"
+311 - T_LNUMBER int

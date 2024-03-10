@@ -2,12 +2,14 @@
 // Assume that $id is obtained from user input
 $id = $_GET['id'];
 $name = $_GET['name'];
+$connection = mysqli_connect("localhost", "root", "", "shop", "", "");
+mysqli_real_escape_string($connection, $id);
 // Vulnerable SQL query
 $query = "SELECT * FROM products WHERE id=$id";
 // Connect to the database
-$connection = mysqli_connect("localhost", "root", "", "shop", "", "");
+
 // Execute the query
-mysqli_real_escape_string($connection, $id);
+
 
 $result = mysqli_query($connection, $query);
 
