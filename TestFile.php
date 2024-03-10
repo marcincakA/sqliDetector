@@ -3,6 +3,8 @@
 $id = $_GET['id'];
 $name = $_GET['name'];
 $connection = mysqli_connect("localhost", "root", "", "shop", "", "");
+
+//id nebude zranitelne lebo je v escape_string pred zostrojenim query
 mysqli_real_escape_string($connection, $id);
 // Vulnerable SQL query
 $query = "SELECT * FROM products WHERE id=$id";
@@ -26,10 +28,8 @@ $query = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connect
 
 $result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id");
 $result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id", MYSQLI_STORE_RESULT);
-$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id", 0);
+$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$name", 0);
 mysqli_close($connection);
 
-$query = "SELECT * FROM products WHERE id=$id AND name=$name";
-$query = "SELECT * FROM products WHERE id=? AND name=?";
 
 ?>

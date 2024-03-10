@@ -64,7 +64,11 @@ class Analyzer
                 $isVulnerable = true;
             }
             //najde vykonavanie sqlPrikazu a zapise do pola
-            if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query') {
+            //todo object oriented style, mozno staci pozmenit hodnotu v ''0
+            //alebo vsetko co konci na query je povazovane za exec point??
+            //alebo pozri ci koniec txtu (substring) obsahuje query
+            //if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query' || $token->text == 'mysqli_multi_query') {
+            if(str_contains(($token->text),'query')) {
                 $line->setVulnerable();
                 $isVulnerable = true;
                 $this->sqlExecutionPoints[] = $lineNumber;
@@ -127,7 +131,9 @@ class Analyzer
             $position = 0;
             foreach ($tokens as $token) {
                 //monentalne pracuje na proceduralnej urovni
-                if ($token->getToken()->text == 'mysqli_query' || $token->getToken()->text == 'mysqli_real_query') {
+                //todo object oriented style
+                //if ($token->getToken()->text == 'mysqli_query' || $token->getToken()->text == 'mysqli_real_query') {
+                if(str_contains(($token->getToken()->text),'query')) {
                     $exPointFound = true;
                     //Hladaj od konca do bodu v ktorom sa nasiel exec point
                     $this->findSQLCommand($line, $position);
@@ -154,7 +160,7 @@ class Analyzer
             //317 T_VARIABLE
             if ($tokens[$i]->getToken()->id ==  317) {
                 //searchVariable();
-                echo("Variable found: " . $tokens[$i]->getToken()->text . "<br>");
+                //echo("Variable found: " . $tokens[$i]->getToken()->text . "<br>");
                 /**/
                 $this->searchVariableForSQLCommand($tokens[$i]->getToken()->text);
             }
@@ -215,6 +221,7 @@ class Analyzer
         //krok 1
         for($i = $lineSize; $i > $position; $i--) {
             //find variables
+            //todo spoj podm
             if ($tokens[$i]->getToken()->id ==  317) {
                 //echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
                 $found = true;
@@ -225,6 +232,7 @@ class Analyzer
 
         }
         //krok 2
+        //todo zmen na variableToCheck size != 0
         if ($found) {
             foreach ($variablesToCheck as $variable) {
                 if(!$this->isSanitazed($variable, $line->getLineNumber())){
@@ -240,6 +248,7 @@ class Analyzer
     //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?
     //Prejde vsetky riadky kde sa nachadza premenna a hlada ci sa niekde nachadza mysqli_real_escape_string
     private function isSanitazed($variable, $lineNumber) : bool {
+        //todo dopln hashmap skontrolovanych premennych aby sa nekontrolovali zbytocne viackrat
         $locations = $this->variablesHashMap[$variable];
         for($i = 0; $i < count($locations); $i++) {
             if ($locations[$i] >= $lineNumber) {
