@@ -5,7 +5,8 @@ $name = $_GET['name'];
 $connection = mysqli_connect("localhost", "root", "", "shop", "", "");
 
 //id nebude zranitelne lebo je v escape_string pred zostrojenim query
-mysqli_real_escape_string($connection, $id);
+//mysqli_real_escape_string($connection, $id);
+//mysqli_real_escape_string($connection, $name);
 // Vulnerable SQL query
 $query = "SELECT * FROM products WHERE id=$id";
 // Connect to the database

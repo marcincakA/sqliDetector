@@ -7,14 +7,21 @@ class Analyzer
 {
     //hashMap kluc - premenna, hodnota - pole riadkov kde sa nachadza
     private array $variablesHashMap;
+
+    //hashMap kluc - cislo riadku, hodnota - riadok (pole tokenov)
+    //pouzita na zobrazenie pre pouzivatela
+    private array $linesHashMapAll;
+
+
     //hashMap kluc - cislo riadku, hodnota - riadok (pole tokenov)
     private array $linesHashMap;
     //pole indexov riadkov, ktore obsahuju SQL query exectution point (zatial mysqli_query a mysqli_real_query)
     private array $sqlExecutionPoints;
 
-    //pole zranitelnosti zatial nevyuzite
+    //pole zranitelnosti
     private array $vulnerabilities;
 
+    //hashMap kluc - premenna, hodnota - bool ci je premenna sanitizovana
     private array $checkedVariables;
     private Tokenizer $tokenizer;
 
@@ -28,6 +35,7 @@ class Analyzer
         $this->vulnerabilities = array();
         $this->sqlExecutionPoints = array();
         $this->checkedVariables = array();
+        $this->linesHashMapAll = array();
 
         $this->init();
     }
@@ -42,6 +50,7 @@ class Analyzer
     private function init() : void {
         $tokens = $this->tokenizer->getTokens();
         $line = null;
+        $lineDisplay = null;
         $oldLineNumber = 0;
         //$position = 0;
         foreach ($tokens as $token) {
@@ -49,11 +58,16 @@ class Analyzer
             if ($lineNumber != $oldLineNumber) {
                 if ($line != null) {
                     $this->linesHashMap[$oldLineNumber] = $line;
+                    $this->linesHashMapAll[$oldLineNumber] = $lineDisplay;
                 }
                 //new line created
                 $line = new Line($lineNumber, false);
+                //new line for display purposes
+                $lineDisplay = new Line($lineNumber, false);
                 //$position = 0;
             }
+            //display line add everything
+            $lineDisplay->addToken(new MyToken($token, false));
             $isVulnerable = false;
             $oldLineNumber = $lineNumber;
             if ($token->id == 317) {
@@ -79,8 +93,7 @@ class Analyzer
                 $this->sqlExecutionPoints[] = $lineNumber;
             }
 
-            $line->addToken(new MyToken($token, $isVulnerable)/*, $position*/); // store tokens in line class
-            //$position++;
+            $line->addToken(new MyToken($token, $isVulnerable)); // store tokens in line class
         }
     }
 
@@ -248,21 +261,21 @@ class Analyzer
     //Prejde vsetky riadky kde sa nachadza premenna a hlada ci sa niekde nachadza mysqli_real_escape_string
     private function isSanitazed($variable, $lineNumber) : bool {
         //kontrola ci uz bola premenna kontrolovana
-        if (in_array($variable, $this->checkedVariables)) {
+        if (array_key_exists($variable, $this->checkedVariables)) {
             //ak raz bola kontrolovana vrat true, ak nebola kontrolovana ma moznost vratit false;
             return true;
         }
-        //ak nebola kontrolovana, pridaj do zoznamu kontrolovanych
-        $this->checkedVariables[] = $variable;
 
         $locations = $this->variablesHashMap[$variable];
         for($i = 0; $i < count($locations); $i++) {
             if ($locations[$i] >= $lineNumber) {
+                $this->checkedVariables[$variable] = false;
                 return false;
             }
             $tokens = $this->linesHashMap[$locations[$i]]->getTokens();
             foreach ($tokens as $token) {
                 if (str_contains($token->getToken()->text, 'mysqli_real_escape_string')) {
+                    $this->checkedVariables[$variable] = true;
                     return true;
                 }
             }
@@ -296,10 +309,46 @@ class Analyzer
     }
 
     public function printVulnerabilities() : void {
+        echo "<h1>Vulnerabilities:</h1> <br>";
         foreach ($this->vulnerabilities as $vulnerability) {
             echo $vulnerability . "<br>";
         }
     }
+
+    /***
+     * @return void
+     * Show source code with highlighted vulnerabilities
+     * 1.st step - parse checked variables and if they are vulnerable, add their position to array
+     * 2.nd step - display source code with highlighted vulnerabilities
+     */
+    public function displayErrors() : void {
+        //step 1, da sa aj $variable => $isVulnerable
+        foreach ($this->checkedVariables as $variable => $isSanitized) {
+            if (!$isSanitized) {
+                $locations = $this->variablesHashMap[$variable];
+                foreach ($locations as $location) {
+                    $this->linesHashMapAll[$location]->setVulnerable();
+                }
+            }
+        }
+
+        //step 2
+        foreach ($this->linesHashMapAll as $line) {
+            $tokens = $line->getTokens();
+            if ($line->isVulnerable()) {
+                echo "<div style='background-color:#ff9966'>";
+            }
+            foreach ($tokens as $token) {
+                echo $token->getToken()->text;
+            }
+            if ($line->isVulnerable()) {
+                echo "</div>";
+            }
+            echo "<br>";
+        }
+    }
+
+
 }
 
 
