@@ -14,7 +14,11 @@ class Analyzer
 
     //pole zranitelnosti zatial nevyuzite
     private array $vulnerabilities;
+
+    private array $checkedVariables;
     private Tokenizer $tokenizer;
+
+
 
     public function __construct(string $file)
     {
@@ -23,6 +27,7 @@ class Analyzer
         $this->linesHashMap = array();
         $this->vulnerabilities = array();
         $this->sqlExecutionPoints = array();
+        $this->checkedVariables = array();
 
         $this->init();
     }
@@ -216,24 +221,18 @@ class Analyzer
 
         $tokens = $line->getTokens();
         $lineSize = count($tokens) - 1;
-        $found = false;
         $variablesToCheck = array();
         //krok 1
         for($i = $lineSize; $i > $position; $i--) {
             //find variables
-            //todo spoj podm
             if ($tokens[$i]->getToken()->id ==  317) {
                 //echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
-                $found = true;
-            }
-            if ($found && $tokens[$i]->getToken()->id ==  317) {
                 $variablesToCheck[] = $tokens[$i]->getToken()->text;
             }
 
         }
         //krok 2
-        //todo zmen na variableToCheck size != 0
-        if ($found) {
+        if (count($variablesToCheck) != 0){
             foreach ($variablesToCheck as $variable) {
                 if(!$this->isSanitazed($variable, $line->getLineNumber())){
                     $this->vulnerabilities[] = $variable . " is not sanitized";
@@ -248,7 +247,14 @@ class Analyzer
     //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?
     //Prejde vsetky riadky kde sa nachadza premenna a hlada ci sa niekde nachadza mysqli_real_escape_string
     private function isSanitazed($variable, $lineNumber) : bool {
-        //todo dopln hashmap skontrolovanych premennych aby sa nekontrolovali zbytocne viackrat
+        //kontrola ci uz bola premenna kontrolovana
+        if (in_array($variable, $this->checkedVariables)) {
+            //ak raz bola kontrolovana vrat true, ak nebola kontrolovana ma moznost vratit false;
+            return true;
+        }
+        //ak nebola kontrolovana, pridaj do zoznamu kontrolovanych
+        $this->checkedVariables[] = $variable;
+
         $locations = $this->variablesHashMap[$variable];
         for($i = 0; $i < count($locations); $i++) {
             if ($locations[$i] >= $lineNumber) {
