@@ -6,7 +6,9 @@ $analyzer = new Analyzer('TestFile.php');
 
 $analyzer->analyzeExecutionPoints();
 
-$analyzer->printLines();
+//$analyzer->printLines();
+
+$analyzer->displayErrors();
 
 $analyzer->printVulnerabilities();
 
