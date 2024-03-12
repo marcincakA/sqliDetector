@@ -86,6 +86,10 @@ class Analyzer
             //alebo vsetko co konci na query je povazovane za exec point??
             //alebo pozri ci koniec txtu (substring) obsahuje query
             //if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query' || $token->text == 'mysqli_multi_query') {
+            if($this->isUserInput($token->text)) {
+                $line->setIsUserInput();
+                $this->sqlExecutionPoints[] = $lineNumber;
+            }
             if($this->isExecutionPoint($token->text)) {
                 $line->setVulnerable();
                 $isVulnerable = true;
@@ -272,10 +276,9 @@ class Analyzer
         return true;
     }
 
-    //momentale sa spolieha na to ze nebude prepisana po prvom vstupe
     //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?
-    //Prejde vsetky riadky kde sa nachadza premenna a hlada ci sa niekde nachadza mysqli_real_escape_string
     private function isSanitazed($variable, $lineNumber) : bool {
+        $isSanitized = false;
         //kontrola ci uz bola premenna kontrolovana
         if (array_key_exists($variable, $this->checkedVariables)) {
             //ak raz bola kontrolovana vrat true, ak nebola kontrolovana ma moznost vratit false;
@@ -286,20 +289,29 @@ class Analyzer
         //todo mozno otocit alebo uplne prekopat, momentalne neberie do uvahy poradie v ktorom su operacie vykonavane
         //moze nastat situacia kedy user input je neskor ako sanitizacia
         //todo pamataj poziciu inicializacie premennej/kedy bol input od pouzivatela, ak je sanitizacia medzi inputom a pouzitim v prikazu tak dobre.
-        for($i = 0; $i < count($locations); $i++) {
+        //for($i = 0; $i < count($locations); $i++) {
+
+        for($i = count($locations) - 1; $i >= 0; $i--) {
+            //todo nastane toto niekedy?
             if ($locations[$i] >= $lineNumber) {
                 $this->checkedVariables[$variable] = false;
-                return false;
+                $isSanitized = false;
             }
             $tokens = $this->linesHashMap[$locations[$i]]->getTokens();
             foreach ($tokens as $token) {
-                if ($this->sanityRuleChecker($token->getToken()->text)) {
+                //do sanity iba token ktory nie je atribut
+                //todo daj to do sanityRuleChecker asi
+                if ($token->getToken()->id != 317 && $this->sanityRuleChecker($token->getToken()->text)) {
                     $this->checkedVariables[$variable] = true;
-                    return true;
+                    $isSanitized = true;
                 }
             }
+            //ak si nasiel prvy user input danej premennej vyskoc z cyklu
+            if ($this->linesHashMap[$locations[$i]]->isUserInput()) {
+                break;
+            }
         }
-        return false;
+        return $isSanitized;
     }
     private function sanityRuleChecker(string $token_text) : bool {
         if(str_contains($token_text, 'mysqli_real_escape_string'))
@@ -372,10 +384,7 @@ class Analyzer
             echo "<br>";
         }
     }
-
-
 }
-//todo pdo quote => safe
-//pdo query, pdo exec => exec points
+
 
 

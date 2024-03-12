@@ -9,13 +9,13 @@ $connection = mysqli_connect("localhost", "root", "", "shop", "", "");
 //mysqli_real_escape_string($connection, $id);
 //mysqli_real_escape_string($connection, $name);
 // Vulnerable SQL query
-$qr = "SELECT * FROM products WHERE id=$id";
+//$qr = "SELECT * FROM products WHERE id=$id";
 // Connect to the database
 
 // Execute the query
 
 
-$result = mysqli_query($connection, $qr);
+//$result = mysqli_query($connection, $qr);
 
 // Fetch the data
 while ($row = mysqli_fetch_assoc($result)) {
@@ -28,10 +28,10 @@ while ($row = mysqli_fetch_assoc($result)) {
 $qr = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connection, $id);
 // Close the connection
 
-$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id");
-$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$age");
-$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id", MYSQLI_STORE_RESULT);
-$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$name", 0);
+//$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id");
+//$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$age");
+//$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id", MYSQLI_STORE_RESULT);
+//$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$name", 0);
 mysqli_close($connection);
 
 

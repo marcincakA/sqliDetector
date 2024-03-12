@@ -4,11 +4,11 @@ include_once "Classes/Analyzer.php";
 
 
 
-$analyzer = new Analyzer('TestFile3_PDO.php');
+$analyzer = new Analyzer('TestFile.php');
 
 $analyzer->analyzeExecutionPoints();
 
-//$analyzer->printLines();
+$analyzer->printLines();
 
 $analyzer->displayErrors();
 

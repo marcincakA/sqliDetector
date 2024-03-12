@@ -16,11 +16,12 @@ try {
     // WARNING: Below is an unsafe way to construct a SQL query string using user input
     // This is highly vulnerable to SQL injection attacks
     // DO NOT USE THIS IN PRODUCTION CODE
-    ($unsafeUserId.quote);
+
+    $quote = $unsafeUserId;
 
     $unsafeUserId = $_GET['user_id']; // Assume this is coming from user input
-
-    //$quote = $unsafeUserId;
+    //$pdo->quote($unsafeUserId);
+    //todo pories toto
     // Construct the SQL query using unsafe input
     $q = "SELECT * FROM users WHERE user_id = $unsafeUserId";
 
@@ -32,8 +33,6 @@ try {
 
     // Output the results
     print_r($user);
-
-    filter_var()
 
 } catch (PDOException $e) {
     // Handle any errors that occur during the execution of the PDO object
