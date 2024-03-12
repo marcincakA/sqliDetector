@@ -2,19 +2,20 @@
 // Assume that $id is obtained from user input
 $id = $_GET['id'];
 $name = $_GET['name'];
+$age = $_GET['name'];
 $connection = mysqli_connect("localhost", "root", "", "shop", "", "");
 
 //id nebude zranitelne lebo je v escape_string pred zostrojenim query
 //mysqli_real_escape_string($connection, $id);
 //mysqli_real_escape_string($connection, $name);
 // Vulnerable SQL query
-$query = "SELECT * FROM products WHERE id=$id";
+$qr = "SELECT * FROM products WHERE id=$id";
 // Connect to the database
 
 // Execute the query
 
 
-$result = mysqli_query($connection, $query);
+$result = mysqli_query($connection, $qr);
 
 // Fetch the data
 while ($row = mysqli_fetch_assoc($result)) {
@@ -24,10 +25,11 @@ while ($row = mysqli_fetch_assoc($result)) {
     echo "Product Price: $" . $row['price'] . "<br>";
 }
 //escaped query riesenie 1
-$query = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connection, $id);
+$qr = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connection, $id);
 // Close the connection
 
 $result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id");
+$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$age");
 $result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id", MYSQLI_STORE_RESULT);
 $result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$name", 0);
 mysqli_close($connection);

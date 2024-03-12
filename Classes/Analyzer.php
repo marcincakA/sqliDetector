@@ -83,11 +83,10 @@ class Analyzer
                 $isVulnerable = true;
             }
             //najde vykonavanie sqlPrikazu a zapise do pola
-            //todo object oriented style, mozno staci pozmenit hodnotu v ''0
             //alebo vsetko co konci na query je povazovane za exec point??
             //alebo pozri ci koniec txtu (substring) obsahuje query
             //if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query' || $token->text == 'mysqli_multi_query') {
-            if(str_contains(($token->text),'query')) {
+            if($this->isExecutionPoint($token->text)) {
                 $line->setVulnerable();
                 $isVulnerable = true;
                 $this->sqlExecutionPoints[] = $lineNumber;
@@ -95,6 +94,12 @@ class Analyzer
 
             $line->addToken(new MyToken($token, $isVulnerable)); // store tokens in line class
         }
+    }
+
+    private function isUserInput(string $param) : bool {
+        if (str_contains($param, '$_GET') || str_contains($param, '$_POST') || str_contains($param, '$_REQUEST'))
+            return true;
+        return false;
     }
 
     public function getVariablesHashMap(): array
@@ -148,10 +153,8 @@ class Analyzer
             $exPointFound = false;
             $position = 0;
             foreach ($tokens as $token) {
-                //monentalne pracuje na proceduralnej urovni
-                //todo object oriented style
                 //if ($token->getToken()->text == 'mysqli_query' || $token->getToken()->text == 'mysqli_real_query') {
-                if(str_contains(($token->getToken()->text),'query')) {
+                if($this->isExecutionPoint($token->getToken()->text)) {
                     $exPointFound = true;
                     //Hladaj od konca do bodu v ktorom sa nasiel exec point
                     $this->findSQLCommand($line, $position);
@@ -159,6 +162,18 @@ class Analyzer
                 $position++;
             }
         }
+    }
+
+    /**
+    * @param string $param parameter na ktorom sa testuje ci obsahuje dany vyraz
+     * @return bool
+     */
+    private function isExecutionPoint(string $param) : bool {
+        if (str_contains($param, 'query'))
+            return true;
+        if (str_contains($param, 'exec'))
+            return true;
+        return false;
     }
 
     /*
@@ -208,6 +223,7 @@ class Analyzer
                 //to lower pre jednoduhsie hladanie
                 $foundStatement = strtolower($token->getToken()->text);
                 //320 T_CONSTANT_ENCAPSED_STRING -> string s parametrom // sanca na zranitelny sql prikaz
+                //todo sprav ako samostatnu metodu
                 if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
                     str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
                     str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
@@ -227,8 +243,8 @@ class Analyzer
      * @param $position
      * @return bool
      * Kontroluje ci je SQL prikaz bezpecny
-     * 1. krok - najde vsetky premenne v SQL prikaze
-     * 2. krok - prejde vsetky premenne a zisti ci su zranitelne
+     * 1. krok - najde vsetky premenne v SQL prikaze, (chod od konca az do pozicie prikazu a zapis premenne)
+     * 2. krok - prejde vsetky premenne a zisti ci su zranitelne ()
      */
     public function isSQLComandSafe($line, $position) : bool {
 
@@ -239,7 +255,6 @@ class Analyzer
         for($i = $lineSize; $i > $position; $i--) {
             //find variables
             if ($tokens[$i]->getToken()->id ==  317) {
-                //echo("SQL command found: " . $tokens[$i]->getToken()->text . "<br>");
                 $variablesToCheck[] = $tokens[$i]->getToken()->text;
             }
 
@@ -248,6 +263,7 @@ class Analyzer
         if (count($variablesToCheck) != 0){
             foreach ($variablesToCheck as $variable) {
                 if(!$this->isSanitazed($variable, $line->getLineNumber())){
+                    //Pridaj do zranitelnosti
                     $this->vulnerabilities[] = $variable . " is not sanitized";
                     return false;
                 }
@@ -267,6 +283,9 @@ class Analyzer
         }
 
         $locations = $this->variablesHashMap[$variable];
+        //todo mozno otocit alebo uplne prekopat, momentalne neberie do uvahy poradie v ktorom su operacie vykonavane
+        //moze nastat situacia kedy user input je neskor ako sanitizacia
+        //todo pamataj poziciu inicializacie premennej/kedy bol input od pouzivatela, ak je sanitizacia medzi inputom a pouzitim v prikazu tak dobre.
         for($i = 0; $i < count($locations); $i++) {
             if ($locations[$i] >= $lineNumber) {
                 $this->checkedVariables[$variable] = false;
@@ -274,7 +293,7 @@ class Analyzer
             }
             $tokens = $this->linesHashMap[$locations[$i]]->getTokens();
             foreach ($tokens as $token) {
-                if (str_contains($token->getToken()->text, 'mysqli_real_escape_string')) {
+                if ($this->sanityRuleChecker($token->getToken()->text)) {
                     $this->checkedVariables[$variable] = true;
                     return true;
                 }
@@ -282,7 +301,13 @@ class Analyzer
         }
         return false;
     }
-
+    private function sanityRuleChecker(string $token_text) : bool {
+        if(str_contains($token_text, 'mysqli_real_escape_string'))
+            return true;
+        if(str_contains($token_text, 'quote'))
+            return true;
+        return false;
+    }
     /**
      * @param $line
      * @param $position
@@ -350,5 +375,7 @@ class Analyzer
 
 
 }
+//todo pdo quote => safe
+//pdo query, pdo exec => exec points
 
 
