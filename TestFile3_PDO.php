@@ -21,8 +21,6 @@ try {
 
     $unsafeUserId = $_GET['user_id']; // Assume this is coming from user input
     //$pdo->quote($unsafeUserId);
-    //todo pories toto
-    // Construct the SQL query using unsafe input
     $q = "SELECT * FROM users WHERE user_id = $unsafeUserId";
 
     // Execute the query

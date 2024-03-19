@@ -25,12 +25,15 @@ while ($row = mysqli_fetch_assoc($result)) {
     echo "Product Price: $" . $row['price'] . "<br>";
 }
 //escaped query riesenie 1
-$qr = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connection, $id);
+//$qry = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connection, $id);
+$qry = "SELECT * FROM products WHERE id=".$ida; //. "And id=". $name;
+$qry .= "AND id=". $name;
+mysqli_real_escape_string($connection, $name);
 // Close the connection
 
 //$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id");
 //$result2 = mysqli_query($connection, "SELECT * FROM products WHERE id=$age");
-//$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$id", MYSQLI_STORE_RESULT);
+$result3 = mysqli_query($connection, $qry);
 //$result3 = mysqli_query($connection, "SELECT * FROM products WHERE id=$name", 0);
 mysqli_close($connection);
 

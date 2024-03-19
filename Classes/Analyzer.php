@@ -106,6 +106,18 @@ class Analyzer
         return false;
     }
 
+    private function variableIsUserInput(string $variable) : bool {
+        if($this->variablesHashMap[$variable] == null) {
+            return false;
+        }
+        foreach ($this->variablesHashMap[$variable] as $line) {
+            if ($this->linesHashMap[$line]->isUserInput()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public function getVariablesHashMap(): array
     {
         return $this->variablesHashMap;
@@ -211,35 +223,68 @@ class Analyzer
      */
     private function searchVariableForSQLCommand(string $variable) : void
     {
+        $composedSQLStatement = "";
+        $composed = false;
+        $comp_VariableLocations = array();
         $lines = $this->variablesHashMap[$variable];
         foreach ($lines as $line) {
             $line = $this->linesHashMap[$line];
             $tokens = $line->getTokens();
             $position = 0;
             $counter = 0;
-            //$isSafe = false;
+            $leftSideCounter = 0; // pocitadlo od 0 do 2 ak viac tak si za = alebo .=
+            $passedLeftSide = false;
             foreach ($tokens as $token) {
                 //podmienky na hladanie prikazov
+                if ($token->getToken()->id == 320) {
+                    $composed = true;
+                    $passedLeftSide = true;
+                    //$composedSQLStatement .= $token->getToken()->text;
+                }
+                if ($composed && $passedLeftSide && $token->getToken()->id != 59 && $token->getToken()->id != 46) {
+                    $composedSQLStatement .= $token->getToken()->text;
+                    if($token->getToken()->id == 317) {
+                        $comp_VariableLocations[$token->getToken()->text] = $line->getLineNumber();
+                    }
+                }
                 if ($token->getToken()->id !=  319) {
                     $position = $counter;
                     continue;
                 }
+
                 //to lower pre jednoduhsie hladanie
                 $foundStatement = strtolower($token->getToken()->text);
-                //320 T_CONSTANT_ENCAPSED_STRING -> string s parametrom // sanca na zranitelny sql prikaz
-                //todo sprav ako samostatnu metodu
-                if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
-                    str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
-                    str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
-                    str_contains($foundStatement, 'delete') && str_contains($foundStatement, 'from')) {
-                    {
+                //319 T_ENCAPSED_AND_WHITESPACES -> string s parametrom // sanca na zranitelny sql prikaz
+                if($this->sqlCommandRule($foundStatement)){
                         //poslem prikaz ktory sa nasiel aj s pozicou v riadku
                         $this->isSQLComandSafe($line, $position);
                     }
-                }
                 $counter++;
+                $leftSideCounter++;
             }
         }
+        if($composed) {
+            $composedSQLStatement = strtolower($composedSQLStatement);
+            if($this->sqlCommandRule($composedSQLStatement)) {
+                foreach ($comp_VariableLocations as $checkedVariable => $checkedLine) {
+                    if(!$this->isSanitazed($checkedVariable, $checkedLine)) {
+                        $this->vulnerabilities[] = $checkedVariable . " is not sanitized";
+                    }
+                }
+            }
+        }
+    }
+
+    private function sqlCommandRule($foundStatement) : bool {
+    //todo sprav ako samostatnu metodu
+    if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
+        str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
+        str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
+        str_contains($foundStatement, 'delete') && str_contains($foundStatement, 'from'))
+        {
+            return true;
+        }
+    return false;
     }
 
     /**
@@ -278,6 +323,9 @@ class Analyzer
 
     //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?
     private function isSanitazed($variable, $lineNumber) : bool {
+        if(!$this->variableIsUserInput($variable)) {
+            return true;
+        }
         $isSanitized = false;
         //kontrola ci uz bola premenna kontrolovana
         if (array_key_exists($variable, $this->checkedVariables)) {
@@ -286,11 +334,6 @@ class Analyzer
         }
 
         $locations = $this->variablesHashMap[$variable];
-        //todo mozno otocit alebo uplne prekopat, momentalne neberie do uvahy poradie v ktorom su operacie vykonavane
-        //moze nastat situacia kedy user input je neskor ako sanitizacia
-        //todo pamataj poziciu inicializacie premennej/kedy bol input od pouzivatela, ak je sanitizacia medzi inputom a pouzitim v prikazu tak dobre.
-        //for($i = 0; $i < count($locations); $i++) {
-
         for($i = count($locations) - 1; $i >= 0; $i--) {
             //todo nastane toto niekedy?
             if ($locations[$i] >= $lineNumber) {
