@@ -313,12 +313,20 @@ class Analyzer
             foreach ($variablesToCheck as $variable) {
                 if(!$this->isSanitazed($variable, $line->getLineNumber())){
                     //Pridaj do zranitelnosti
-                    $this->vulnerabilities[] = $variable . " is not sanitized";
+                    $this->vulnerabilities[] = $variable . " located at lines " . $this->getLines($variable) . " is not sanitized" ;
                     return false;
                 }
             }
         }
         return true;
+    }
+
+    private function getLines($variable) : string {
+        $string = "";
+foreach ($this->variablesHashMap[$variable] as $line) {
+            $string .= $line . ", ";
+        }
+        return $string;
     }
 
     //mozno lepsie prehodit a zacat od spodku ak je prvy vyskyt od spodku zranitelny $_GET/$_POST tak automaticky false?

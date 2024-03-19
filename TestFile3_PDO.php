@@ -22,7 +22,9 @@ try {
     $unsafeUserId = $_GET['user_id']; // Assume this is coming from user input
     //$pdo->quote($unsafeUserId);
     $q = "SELECT * FROM users WHERE user_id = $unsafeUserId";
-
+    $q .= "AND user_id=". $unsafeUserId;
+    $q2 = "SELECT * FROM users WHERE user_id = ".$unsafeUserId;
+    $q2 .= "AND user_id=". $unsafeUserId;
     // Execute the query
     $stmt = $pdo->query($q);
 

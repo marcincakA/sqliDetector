@@ -25,3 +25,4 @@ function analyze($projectPath) {
 }
 
 analyze($argv[1]);
+//analyze("C:\Users\marci\PhpstormProjects\InjectionDetector");
