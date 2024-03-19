@@ -395,6 +395,17 @@ class Analyzer
         }
     }
 
+    public function printVulnerabilitiesConsole() : void {
+        if (empty($this->vulnerabilities)) {
+            echo "\tNo vulnerabilities found\n";
+            return;
+        }
+        echo "\tVulnerabilities: \n";
+        foreach ($this->vulnerabilities as $vulnerability) {
+            echo "\t\t". $vulnerability . "\n";
+        }
+    }
+
     /***
      * @return void
      * Show source code with highlighted vulnerabilities
