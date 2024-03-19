@@ -7,9 +7,7 @@ function analyze($projectPath) {
         return;
     }
     $fileIterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($projectPath));
-
     $vulnerabilitiesCount = 0;
-
     foreach ($fileIterator as $file) {
         if ($file->isDir()) {
             continue;
