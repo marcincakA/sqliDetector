@@ -26,7 +26,7 @@ while ($row = mysqli_fetch_assoc($result)) {
 }
 //escaped query riesenie 1
 //$qry = "SELECT * FROM products WHERE id=" . mysqli_real_escape_string($connection, $id);
-$qry = "SELECT * FROM products WHERE id=".$ida; //. "And id=". $name;
+$qry = "SELECT * FROM products WHERE id=$id"; //. "And id=". $name;
 $qry .= "AND id=". $name;
 mysqli_real_escape_string($connection, $name);
 // Close the connection

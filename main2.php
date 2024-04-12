@@ -12,8 +12,9 @@ $analyzer->analyzeExecutionPoints();
 
 $analyzer->printLines();
 
-//$analyzer->displayErrors();
+$analyzer->displayErrors();
 
 $analyzer->printVulnerabilities();
 
+$analyzer->printVulnerabilitiesConsole();
 

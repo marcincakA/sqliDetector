@@ -234,18 +234,22 @@ class Analyzer
             $counter = 0;
             $leftSideCounter = 0; // pocitadlo od 0 do 2 ak viac tak si za = alebo .=
             $passedLeftSide = false;
+            $addNextToken = false;
             foreach ($tokens as $token) {
                 //podmienky na hladanie prikazov
                 if ($token->getToken()->id == 320) {
                     $composed = true;
                     $passedLeftSide = true;
-                    //$composedSQLStatement .= $token->getToken()->text;
                 }
-                if ($composed && $passedLeftSide && $token->getToken()->id != 59 && $token->getToken()->id != 46) {
+                if ($composed && $passedLeftSide && $token->getToken()->id != 59 && $token->getToken()->id != 46 || $addNextToken) {
                     $composedSQLStatement .= $token->getToken()->text;
                     if($token->getToken()->id == 317) {
                         $comp_VariableLocations[$token->getToken()->text] = $line->getLineNumber();
                     }
+                }
+                if($token->getToken()->id == 319) {
+                    $composedSQLStatement .= $token->getToken()->text;
+                    $addNextToken = !$addNextToken;
                 }
                 if ($token->getToken()->id !=  319) {
                     $position = $counter;
@@ -253,14 +257,14 @@ class Analyzer
                 }
 
                 //to lower pre jednoduhsie hladanie
-                $foundStatement = strtolower($token->getToken()->text);
+                //$foundStatement = strtolower($token->getToken()->text);
                 //319 T_ENCAPSED_AND_WHITESPACES -> string s parametrom // sanca na zranitelny sql prikaz
-                if($this->sqlCommandRule($foundStatement)){
-                        //poslem prikaz ktory sa nasiel aj s pozicou v riadku
-                        $this->isSQLComandSafe($line, $position);
-                    }
-                $counter++;
-                $leftSideCounter++;
+                //if($this->sqlCommandRule($foundStatement)){
+                    //poslem prikaz ktory sa nasiel aj s pozicou v riadku
+                    //$this->isSQLComandSafe($line, $position);
+                //}
+                //$counter++;
+                //$leftSideCounter++;
             }
         }
         if($composed) {
@@ -268,7 +272,7 @@ class Analyzer
             if($this->sqlCommandRule($composedSQLStatement)) {
                 foreach ($comp_VariableLocations as $checkedVariable => $checkedLine) {
                     if(!$this->isSanitazed($checkedVariable, $checkedLine)) {
-                        $this->vulnerabilities[] = $checkedVariable . " is not sanitized";
+                        $this->vulnerabilities[] = $checkedVariable . " located at lines " . $this->getLines($checkedVariable). " is not sanitized";
                     }
                 }
             }
@@ -276,7 +280,6 @@ class Analyzer
     }
 
     private function sqlCommandRule($foundStatement) : bool {
-    //todo sprav ako samostatnu metodu
     if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
         str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
         str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
@@ -323,7 +326,7 @@ class Analyzer
 
     private function getLines($variable) : string {
         $string = "";
-foreach ($this->variablesHashMap[$variable] as $line) {
+        foreach ($this->variablesHashMap[$variable] as $line) {
             $string .= $line . ", ";
         }
         return $string;
@@ -350,8 +353,6 @@ foreach ($this->variablesHashMap[$variable] as $line) {
             }
             $tokens = $this->linesHashMap[$locations[$i]]->getTokens();
             foreach ($tokens as $token) {
-                //do sanity iba token ktory nie je atribut
-                //todo daj to do sanityRuleChecker asi
                 if ($token->getToken()->id != 317 && $this->sanityRuleChecker($token->getToken()->text)) {
                     $this->checkedVariables[$variable] = true;
                     $isSanitized = true;
