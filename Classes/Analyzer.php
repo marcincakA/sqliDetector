@@ -101,7 +101,7 @@ class Analyzer
     }
 
     private function isUserInput(string $param) : bool {
-        if (str_contains($param, '$_GET') || str_contains($param, '$_POST') || str_contains($param, '$_REQUEST'))
+        if (str_contains($param, '$_GET') || str_contains($param, '$_POST') || str_contains($param, '$_REQUEST') || str_contains($param, 'readline'))
             return true;
         return false;
     }
@@ -138,6 +138,11 @@ class Analyzer
         return $this->tokenizer;
     }
 
+    /**
+     * Metoda pouzita pre debug programu vypise vsetky tokeny zoradene po riadkoch
+     * @return void
+     *
+     */
     public function printLines() : void {
         foreach ($this->linesHashMap as $line) {
             $value = $line->isVulnerable() ? "is vulnerable" : "is not vulnerable";
@@ -159,7 +164,7 @@ class Analyzer
 
     /**
      * @return void
-     * Analyzuje vykonavacie body SQL prikazov
+     * Analyzuje vykonavanie body SQL prikazov
      * Prechadza riadky a hlada vykonavacie body
      */
     public function analyzeExecutionPoints() : void {
@@ -192,13 +197,14 @@ class Analyzer
         return false;
     }
 
-    /*
+    /**
      * Procedural style
      * mysqli_real_query(mysqli $mysql, string $query): bool
      * mysqli_query(mysqli $mysql, string $query, int $resultmode = MYSQLI_STORE_RESULT): mysqli_result|bool
      * 1st param is connection
      * 2nd param is query
-     * */
+     * Prechadza dany raidok a hlada v nom sql prikaz alebo premenne ktore ho mozu obsahovat
+     */
     private function findSQLCommand($line, $position) : void {
         $tokens = $line->getTokens();
         $exPointFound = false;
@@ -267,13 +273,11 @@ class Analyzer
                 //$leftSideCounter++;
             }
         }
-        if($composed) {
-            $composedSQLStatement = strtolower($composedSQLStatement);
-            if($this->sqlCommandRule($composedSQLStatement)) {
-                foreach ($comp_VariableLocations as $checkedVariable => $checkedLine) {
-                    if(!$this->isSanitazed($checkedVariable, $checkedLine)) {
-                        $this->vulnerabilities[] = $checkedVariable . " located at lines " . $this->getLines($checkedVariable). " is not sanitized";
-                    }
+        $composedSQLStatement = strtolower($composedSQLStatement);
+        if($this->sqlCommandRule($composedSQLStatement)) {
+            foreach ($comp_VariableLocations as $checkedVariable => $checkedLine) {
+                if(!$this->isSanitazed($checkedVariable, $checkedLine)) {
+                    $this->vulnerabilities[] = $checkedVariable . " located at lines " . $this->getLines($checkedVariable). " is not sanitized";
                 }
             }
         }
@@ -299,7 +303,7 @@ class Analyzer
      * 1. krok - najde vsetky premenne v SQL prikaze, (chod od konca az do pozicie prikazu a zapis premenne)
      * 2. krok - prejde vsetky premenne a zisti ci su zranitelne ()
      */
-    public function isSQLComandSafe($line, $position) : bool {
+    private function isSQLComandSafe($line, $position) : bool {
 
         $tokens = $line->getTokens();
         $lineSize = count($tokens) - 1;
@@ -378,31 +382,6 @@ class Analyzer
             return true;
         return false;
     }
-    /**
-     * @param $line
-     * @param $position
-     * Constructs SQL command from given line and position
-     * Useless bullshit
-     * @return string
-     */
-    private function constructSQLCommand($line, $position) : string {
-        $tokens = $line->getTokens();
-        $lineSize = count($tokens) - 1;
-        $command = "";
-            for($i = $position; $i <$lineSize; $i++) {
-                if ($tokens[$i]->getToken()->id ==  34) {
-                    break;
-                }
-                $command .= $tokens[$i]->getToken()->text;
-            }
-            return $command;
-    }
-    //naco ti je toto
-    private function cutCommand($command) : string {
-
-        return $command;
-    }
-
     public function printVulnerabilities() : void {
         echo "<h1>Vulnerabilities:</h1> <br>";
         foreach ($this->vulnerabilities as $vulnerability) {

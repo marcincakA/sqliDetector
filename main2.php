@@ -6,7 +6,7 @@ include_once "Classes/Analyzer.php";
 
 
 
-$analyzer = new Analyzer('TestFile2.php');
+$analyzer = new Analyzer('TestFile.php');
 
 $analyzer->analyzeExecutionPoints();
 

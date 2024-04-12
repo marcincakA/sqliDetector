@@ -1,7 +1,7 @@
 <?php
     class Tokenizer {
         private $file;
-        private $tokens;
+        private array $tokens;
 
         public function __construct($file) {
             $this->file = $file;
