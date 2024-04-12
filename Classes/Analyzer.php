@@ -294,6 +294,7 @@ class Analyzer
      * @param $line
      * @param $position
      * @return bool
+     * depricated METHOD !!!
      * Kontroluje ci je SQL prikaz bezpecny
      * 1. krok - najde vsetky premenne v SQL prikaze, (chod od konca az do pozicie prikazu a zapis premenne)
      * 2. krok - prejde vsetky premenne a zisti ci su zranitelne ()
@@ -324,6 +325,11 @@ class Analyzer
         return true;
     }
 
+    /***
+     * @param $variable
+     * @return string
+     * Vrati string s riadkami kde sa nachadza premenna
+     */
     private function getLines($variable) : string {
         $string = "";
         foreach ($this->variablesHashMap[$variable] as $line) {
