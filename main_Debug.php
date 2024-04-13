@@ -6,7 +6,7 @@ include_once "Classes/Analyzer.php";
 
 
 
-$analyzer = new Analyzer('TestFile3_PDO.php');
+$analyzer = new Analyzer('TestFiles\TestFileUnsafeStringInterpolation.php');
 
 $analyzer->analyzeExecutionPoints();
 
