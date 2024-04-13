@@ -57,6 +57,7 @@ class Analyzer
             $lineNumber = $token->line;
             if ($lineNumber != $oldLineNumber) {
                 if ($line != null) {
+                    //priradi predchadzajuci riadok do pola riadkov
                     $this->linesHashMap[$oldLineNumber] = $line;
                     $this->linesHashMapAll[$oldLineNumber] = $lineDisplay;
                 }
@@ -98,6 +99,9 @@ class Analyzer
 
             $line->addToken(new MyToken($token, $isVulnerable)); // store tokens in line class
         }
+        //priradi posledny riadok do pola riadkov
+        $this->linesHashMap[$oldLineNumber] = $line;
+        $this->linesHashMapAll[$oldLineNumber] = $line;
     }
 
     private function isUserInput(string $param) : bool {
@@ -251,6 +255,7 @@ class Analyzer
                     $composedSQLStatement .= $token->getToken()->text;
                     if($token->getToken()->id == 317) {
                         $comp_VariableLocations[$token->getToken()->text] = $line->getLineNumber();
+                        $addNextToken = !$addNextToken;
                     }
                 }
                 if($token->getToken()->id == 319) {
