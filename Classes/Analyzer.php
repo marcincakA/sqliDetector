@@ -89,7 +89,7 @@ class Analyzer
             //if($token->text == 'mysqli_query' || $token->text == 'mysqli_real_query' || $token->text == 'mysqli_multi_query') {
             if($this->isUserInput($token->text)) {
                 $line->setIsUserInput();
-                $this->sqlExecutionPoints[] = $lineNumber;
+                //$this->sqlExecutionPoints[] = $lineNumber;
             }
             if($this->isExecutionPoint($token->text)) {
                 $line->setVulnerable();
@@ -105,7 +105,8 @@ class Analyzer
     }
 
     private function isUserInput(string $param) : bool {
-        if (str_contains($param, '$_GET') || str_contains($param, '$_POST') || str_contains($param, '$_REQUEST') || str_contains($param, 'readline'))
+        if (str_contains($param, '$_GET') || str_contains($param, '$_POST') || str_contains($param, '$_REQUEST')
+            || str_contains($param, 'readline'))
             return true;
         return false;
     }
@@ -235,6 +236,7 @@ class Analyzer
     {
         $composedSQLStatement = "";
         $composed = false;
+        //premenna ktora sa vyskytla v SQL príkaze, treba vykonať kontrolu ci je sanitizovana
         $comp_VariableLocations = array();
         $lines = $this->variablesHashMap[$variable];
         foreach ($lines as $line) {
@@ -289,10 +291,17 @@ class Analyzer
     }
 
     private function sqlCommandRule($foundStatement) : bool {
-    if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
-        str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
-        str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
-        str_contains($foundStatement, 'delete') && str_contains($foundStatement, 'from'))
+//    if (str_contains($foundStatement, 'select') && str_contains($foundStatement, 'from') ||
+//        str_contains($foundStatement, 'insert') && str_contains($foundStatement, 'into') ||
+//        str_contains($foundStatement, 'update') && str_contains($foundStatement, 'set') ||
+//        str_contains($foundStatement, 'delete') && str_contains($foundStatement, 'from'))
+//        {
+//            return true;
+//        } nefunguje pri skladanych retazcoch
+        if (str_contains($foundStatement, 'select') ||
+            str_contains($foundStatement, 'insert') ||
+            str_contains($foundStatement, 'update') ||
+            str_contains($foundStatement, 'delete'))
         {
             return true;
         }
