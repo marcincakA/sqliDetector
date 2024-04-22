@@ -106,7 +106,7 @@ class Analyzer
 
     private function isUserInput(string $param) : bool {
         if (str_contains($param, '$_GET') || str_contains($param, '$_POST') || str_contains($param, '$_REQUEST')
-            || str_contains($param, 'readline'))
+            || str_contains($param, 'readline') || str_contains($param, '$_SESSION'))
             return true;
         return false;
     }

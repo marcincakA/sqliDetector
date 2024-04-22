@@ -20,7 +20,7 @@ function analyze($projectPath, $mode) {
 
             $analyzer = new Analyzer($file->getPathname());
             $analyzer->analyzeExecutionPoints();
-            echo $file->getFilename() . "\n";
+            echo $file->getPathname() . "\n";
             $analyzer->printVulnerabilitiesConsole();
         }
     }
