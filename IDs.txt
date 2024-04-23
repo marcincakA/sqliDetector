@@ -1,6 +1,6 @@
 317 - T_Variable
 34 - "
-319 - T_EncapsedAndWhitespace
+319 - T_EncapsedAndWhitespace - string s hodnotou vo vnútri
 59 - ;
 313 - T_String
 320 - T_ConstantEncapsedString "Hello World"
