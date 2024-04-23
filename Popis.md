@@ -11,3 +11,5 @@ V druhom kroku prechadza analyzer tokeny (init) a vytvori si hashmapu [cislo.ria
         //ak najde v premennej sql prikaz, kontroluje ostatne premenne ktore boli pouzite na jeho vytvorenie
             //kontroluje ci premenne pouzite na vytvorenie prikazu maju pred konstrukciou prikazu pouzitu metodu 'mysqli_real_escape_string';
             Ak nie tato premenna je zranitelna
+
+riešenie je dostupné na adrese: https://github.com/marcincakA/sqliDetector
